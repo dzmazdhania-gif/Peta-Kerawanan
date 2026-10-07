@@ -1,1 +1,1759 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
 
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Peta Persebaran Pelaku Usaha | PSDKP</title>
+
+<!-- Leaflet -->
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<!-- Marker Cluster -->
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+/>
+
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+/>
+
+<!-- SheetJS untuk membaca Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f8fb;
+    color: #17324d;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    height: 70px;
+    background: linear-gradient(135deg, #075985, #0f766e);
+    color: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 25px;
+
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+
+    position: relative;
+    z-index: 1000;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-icon {
+    width: 42px;
+    height: 42px;
+
+    background: rgba(255,255,255,0.15);
+
+    border-radius: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 23px;
+}
+
+.logo-text strong {
+    display: block;
+    font-size: 18px;
+}
+
+.logo-text span {
+    display: block;
+    font-size: 11px;
+    opacity: 0.85;
+    margin-top: 3px;
+}
+
+.status {
+    font-size: 13px;
+    background: rgba(255,255,255,0.14);
+    padding: 8px 13px;
+    border-radius: 20px;
+}
+
+/* =========================
+   MAIN
+========================= */
+
+.main {
+    height: calc(100vh - 70px);
+    display: flex;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar {
+    width: 350px;
+    background: white;
+
+    border-right: 1px solid #dce7ef;
+
+    padding: 20px;
+
+    overflow-y: auto;
+
+    position: relative;
+    z-index: 900;
+}
+
+.sidebar h2 {
+    margin: 0 0 5px 0;
+    font-size: 19px;
+}
+
+.subtitle {
+    color: #6b8192;
+    font-size: 12px;
+    margin-bottom: 18px;
+}
+
+/* =========================
+   STATISTICS
+========================= */
+
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+
+    margin-bottom: 18px;
+}
+
+.stat-card {
+    background: #f5f9fc;
+    border: 1px solid #e0ebf2;
+
+    border-radius: 10px;
+
+    padding: 12px;
+}
+
+.stat-card .number {
+    font-size: 20px;
+    font-weight: bold;
+    color: #075985;
+}
+
+.stat-card .label {
+    font-size: 11px;
+    color: #718596;
+    margin-top: 4px;
+}
+
+/* =========================
+   FILTER
+========================= */
+
+.section-title {
+    font-size: 12px;
+    font-weight: bold;
+
+    color: #486274;
+
+    margin: 17px 0 8px;
+}
+
+input,
+select {
+    width: 100%;
+
+    border: 1px solid #ccdce7;
+
+    border-radius: 8px;
+
+    padding: 10px 11px;
+
+    font-size: 13px;
+
+    outline: none;
+
+    background: white;
+}
+
+input:focus,
+select:focus {
+    border-color: #0f766e;
+}
+
+/* =========================
+   LEGEND
+========================= */
+
+.legend {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+
+    margin-top: 10px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+
+    font-size: 12px;
+
+    color: #526b7c;
+}
+
+.legend-dot {
+    width: 11px;
+    height: 11px;
+
+    border-radius: 50%;
+
+    margin-right: 8px;
+
+    border: 2px solid white;
+
+    box-shadow: 0 0 0 1px #aaa;
+}
+
+/* =========================
+   MAP
+========================= */
+
+.map-container {
+    flex: 1;
+    position: relative;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* =========================
+   LOADING
+========================= */
+
+.loading {
+    position: absolute;
+
+    top: 20px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 1000;
+
+    background: white;
+
+    padding: 10px 16px;
+
+    border-radius: 20px;
+
+    box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+
+    font-size: 13px;
+
+    display: none;
+}
+
+/* =========================
+   POPUP
+========================= */
+
+.popup-title {
+    font-weight: bold;
+
+    color: #075985;
+
+    font-size: 15px;
+
+    margin-bottom: 8px;
+}
+
+.popup-table {
+    border-collapse: collapse;
+
+    width: 100%;
+
+    font-size: 12px;
+}
+
+.popup-table td {
+    padding: 4px 3px;
+
+    border-bottom: 1px solid #edf2f5;
+
+    vertical-align: top;
+}
+
+.popup-table td:first-child {
+    font-weight: bold;
+
+    color: #5d7180;
+
+    width: 38%;
+}
+
+.maps-button {
+    display: block;
+
+    text-align: center;
+
+    margin-top: 10px;
+
+    padding: 8px;
+
+    border-radius: 7px;
+
+    background: #075985;
+
+    color: white !important;
+
+    text-decoration: none;
+
+    font-size: 12px;
+
+    font-weight: bold;
+}
+
+.maps-button:hover {
+    background: #0f766e;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width: 800px) {
+
+    .main {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: 300px;
+
+        border-right: none;
+        border-bottom: 1px solid #dce7ef;
+    }
+
+    .map-container {
+        height: calc(100vh - 370px);
+    }
+
+    .status {
+        display: none;
+    }
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<!-- =========================
+     HEADER
+========================= -->
+
+<div class="header">
+
+    <div class="logo">
+
+        <div class="logo-icon">
+            🌊
+        </div>
+
+        <div class="logo-text">
+
+            <strong>
+                Peta Persebaran Pelaku Usaha
+            </strong>
+
+            <span>
+                Data Pengawasan PSDKP
+            </span>
+
+        </div>
+
+    </div>
+
+    <div class="status" id="status">
+        Memuat data...
+    </div>
+
+</div>
+
+
+<!-- =========================
+     MAIN
+========================= -->
+
+<div class="main">
+
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+        <h2>Persebaran Lokasi</h2>
+
+        <div class="subtitle">
+            Peta interaktif lokasi pelaku usaha berdasarkan data Excel PSDKP
+        </div>
+
+
+        <!-- STATISTICS -->
+
+        <div class="stats">
+
+            <div class="stat-card">
+
+                <div
+                    class="number"
+                    id="totalData"
+                >
+                    -
+                </div>
+
+                <div class="label">
+                    Total Lokasi
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div
+                    class="number"
+                    id="totalUPT"
+                >
+                    -
+                </div>
+
+                <div class="label">
+                    UPT PSDKP
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- SEARCH -->
+
+        <div class="section-title">
+            Cari Pelaku Usaha / Lokasi
+        </div>
+
+        <input
+            type="text"
+            id="search"
+            placeholder="Ketik nama usaha atau lokasi..."
+        >
+
+
+        <!-- FILTER UPT -->
+
+        <div class="section-title">
+            Filter UPT PSDKP
+        </div>
+
+        <select id="uptFilter">
+
+            <option value="">
+                Semua UPT PSDKP
+            </option>
+
+        </select>
+
+
+        <!-- LEGEND -->
+
+        <div class="section-title">
+            Informasi Peta
+        </div>
+
+        <div class="legend">
+
+            <div class="legend-item">
+
+                <span
+                    class="legend-dot"
+                    style="background:#0f766e"
+                ></span>
+
+                Lokasi Pelaku Usaha
+
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            Cara menggunakan
+        </div>
+
+        <div style="
+            font-size:12px;
+            line-height:1.6;
+            color:#657b8b;
+        ">
+
+            • Gunakan pencarian untuk menemukan pelaku usaha.
+            <br>
+
+            • Gunakan filter untuk memilih UPT PSDKP.
+            <br>
+
+            • Klik titik pada peta untuk melihat informasi.
+            <br>
+
+            • Klik <b>Buka di Google Maps</b> untuk melihat lokasi secara langsung.
+
+        </div>
+
+
+    </aside>
+
+
+    <!-- MAP -->
+
+    <div class="map-container">
+
+        <div
+            class="loading"
+            id="loading"
+        >
+            Memuat data Excel...
+        </div>
+
+        <div id="map"></div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
+     LEAFLET
+========================= -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+
+<script>
+
+/* ============================================================
+   KONFIGURASI
+============================================================ */
+
+const EXCEL_FILE = "REVIEW_KOORDINAT_PSDK.xlsx";
+
+let allData = [];
+let markerLayer;
+
+
+/* ============================================================
+   INITIAL MAP
+============================================================ */
+
+const map = L.map("map", {
+    zoomControl: true
+});
+
+
+/* OpenStreetMap */
+
+const osm = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom: 19,
+        attribution:
+            '&copy; OpenStreetMap contributors'
+    }
+).addTo(map);
+
+
+/* Satellite */
+
+const satellite = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+        maxZoom: 19,
+        attribution:
+            "Tiles &copy; Esri"
+    }
+);
+
+
+/* Light */
+
+const light = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    {
+        maxZoom: 20,
+        attribution:
+            "&copy; CARTO"
+    }
+);
+
+
+/* Base map control */
+
+L.control.layers({
+
+    "OpenStreetMap": osm,
+
+    "Satellite": satellite,
+
+    "Light": light
+
+}).addTo(map);
+
+
+/* Default Indonesia view */
+
+map.setView(
+    [-2.5, 118],
+    5
+);
+
+
+/* ============================================================
+   LOAD EXCEL
+============================================================ */
+
+async function loadExcel() {
+
+    document.getElementById("loading").style.display = "block";
+
+    try {
+
+        const response = await fetch(EXCEL_FILE);
+
+        if (!response.ok) {
+
+            throw new Error(
+                "File Excel tidak ditemukan: " +
+                EXCEL_FILE
+            );
+
+        }
+
+        const arrayBuffer =
+            await response.arrayBuffer();
+
+
+        const workbook =
+            XLSX.read(
+                arrayBuffer,
+                {
+                    type: "array"
+                }
+            );
+
+
+        console.log(
+            "Sheet Excel:",
+            workbook.SheetNames
+        );
+
+
+        /*
+         * Prioritas:
+         *
+         * 1. SEMUA_DATA
+         * 2. REVIEW
+         * 3. sheet pertama
+         */
+
+        let sheetName;
+
+
+        if (
+            workbook.SheetNames
+                .includes("SEMUA_DATA")
+        ) {
+
+            sheetName = "SEMUA_DATA";
+
+        }
+
+        else if (
+            workbook.SheetNames
+                .includes("REVIEW")
+        ) {
+
+            sheetName = "REVIEW";
+
+        }
+
+        else {
+
+            sheetName =
+                workbook.SheetNames[0];
+
+        }
+
+
+        console.log(
+            "Sheet yang digunakan:",
+            sheetName
+        );
+
+
+        const worksheet =
+            workbook.Sheets[sheetName];
+
+
+        allData =
+            XLSX.utils.sheet_to_json(
+                worksheet,
+                {
+                    defval: ""
+                }
+            );
+
+
+        console.log(
+            "Jumlah data:",
+            allData.length
+        );
+
+
+        processData();
+
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        document.getElementById("status").innerText =
+            "Gagal memuat Excel";
+
+        alert(
+            "Gagal membaca file Excel.\n\n" +
+            error.message +
+            "\n\nPastikan file REVIEW_KOORDINAT_PSDK.xlsx berada di folder yang sama dengan index.html."
+        );
+
+    }
+
+    finally {
+
+        document.getElementById("loading").style.display = "none";
+
+    }
+
+}
+
+
+/* ============================================================
+   FIND COLUMN
+============================================================ */
+
+function findColumn(row, keywords) {
+
+    const keys =
+        Object.keys(row);
+
+
+    for (
+        const key of keys
+    ) {
+
+        const clean =
+            String(key)
+                .trim()
+                .toLowerCase();
+
+
+        if (
+            keywords.every(
+                keyword =>
+                    clean.includes(
+                        keyword.toLowerCase()
+                    )
+            )
+        ) {
+
+            return key;
+
+        }
+
+    }
+
+    return null;
+
+}
+
+
+/* ============================================================
+   PROCESS DATA
+============================================================ */
+
+function processData() {
+
+    if (
+        !allData ||
+        allData.length === 0
+    ) {
+
+        alert(
+            "Tidak ada data pada sheet Excel."
+        );
+
+        return;
+
+    }
+
+
+    const sample =
+        allData[0];
+
+
+    /*
+     * Deteksi kolom
+     */
+
+    const longCol =
+        findColumn(
+            sample,
+            ["long"]
+        );
+
+
+    const latCol =
+        findColumn(
+            sample,
+            ["lat"]
+        );
+
+
+    const usahaCol =
+        findColumn(
+            sample,
+            ["pelaku", "usaha"]
+        );
+
+
+    const lokasiCol =
+        findColumn(
+            sample,
+            ["lokasi"]
+        );
+
+
+    const pelanggaranCol =
+        findColumn(
+            sample,
+            ["indikasi", "pelanggaran"]
+        );
+
+
+    const uptCol =
+        findColumn(
+            sample,
+            ["upt", "psdkp"]
+        );
+
+
+    const tlCol =
+        findColumn(
+            sample,
+            ["tl", "pengawasan"]
+        );
+
+
+    const kegiatanCol =
+        findColumn(
+            sample,
+            ["bentuk", "kegiatan"]
+        );
+
+
+    console.log({
+        longCol,
+        latCol,
+        usahaCol,
+        lokasiCol,
+        pelanggaranCol,
+        uptCol,
+        tlCol,
+        kegiatanCol
+    });
+
+
+    /*
+     * Jika sheet REVIEW digunakan,
+     * fallback ke RECOMMENDED_LONG/LAT
+     */
+
+    const recommendedLong =
+        findColumn(
+            sample,
+            ["recommended", "long"]
+        );
+
+
+    const recommendedLat =
+        findColumn(
+            sample,
+            ["recommended", "lat"]
+        );
+
+
+    /*
+     * Buang data tanpa koordinat
+     */
+
+    const validData =
+        allData.filter(row => {
+
+            let longitude =
+                parseFloat(
+                    row[longCol]
+                );
+
+
+            let latitude =
+                parseFloat(
+                    row[latCol]
+                );
+
+
+            /*
+             * Fallback ke recommended
+             */
+
+            if (
+                (
+                    !Number.isFinite(
+                        longitude
+                    )
+                    ||
+                    !Number.isFinite(
+                        latitude
+                    )
+                )
+                &&
+                recommendedLong
+                &&
+                recommendedLat
+            ) {
+
+                longitude =
+                    parseFloat(
+                        row[recommendedLong]
+                    );
+
+                latitude =
+                    parseFloat(
+                        row[recommendedLat]
+                    );
+
+            }
+
+
+            return (
+
+                Number.isFinite(
+                    longitude
+                )
+
+                &&
+
+                Number.isFinite(
+                    latitude
+                )
+
+                &&
+
+                latitude >= -90
+
+                &&
+
+                latitude <= 90
+
+                &&
+
+                longitude >= -180
+
+                &&
+
+                longitude <= 180
+
+            );
+
+        });
+
+
+    console.log(
+        "Data dengan koordinat:",
+        validData.length
+    );
+
+
+    /*
+     * Simpan metadata kolom
+     */
+
+    window.columnConfig = {
+
+        longCol,
+        latCol,
+
+        usahaCol,
+        lokasiCol,
+
+        pelanggaranCol,
+        uptCol,
+
+        tlCol,
+        kegiatanCol,
+
+        recommendedLong,
+        recommendedLat
+
+    };
+
+
+    /*
+     * Statistik
+     */
+
+    document.getElementById(
+        "totalData"
+    ).innerText =
+        validData.length;
+
+
+    const uptSet =
+        new Set();
+
+
+    validData.forEach(row => {
+
+        if (
+            uptCol &&
+            row[uptCol]
+        ) {
+
+            uptSet.add(
+                String(
+                    row[uptCol]
+                ).trim()
+            );
+
+        }
+
+    });
+
+
+    document.getElementById(
+        "totalUPT"
+    ).innerText =
+        uptSet.size;
+
+
+    /*
+     * Dropdown UPT
+     */
+
+    const select =
+        document.getElementById(
+            "uptFilter"
+        );
+
+
+    [...uptSet]
+        .sort()
+        .forEach(upt => {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value = upt;
+
+            option.textContent = upt;
+
+            select.appendChild(
+                option
+            );
+
+        });
+
+
+    /*
+     * Simpan data valid
+     */
+
+    window.validData =
+        validData;
+
+
+    /*
+     * Buat marker
+     */
+
+    renderMarkers(
+        validData
+    );
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        `${validData.length} lokasi ditemukan`;
+
+}
+
+
+/* ============================================================
+   CREATE MARKERS
+============================================================ */
+
+function renderMarkers(data) {
+
+    /*
+     * Hapus layer lama
+     */
+
+    if (markerLayer) {
+
+        map.removeLayer(
+            markerLayer
+        );
+
+    }
+
+
+    markerLayer =
+        L.markerClusterGroup({
+
+            showCoverageOnHover:
+                false,
+
+            maxClusterRadius:
+                45
+
+        });
+
+
+    const bounds = [];
+
+
+    data.forEach((row, index) => {
+
+
+        const config =
+            window.columnConfig;
+
+
+        /*
+         * Ambil koordinat
+         */
+
+        let longitude =
+            parseFloat(
+                row[config.longCol]
+            );
+
+
+        let latitude =
+            parseFloat(
+                row[config.latCol]
+            );
+
+
+        /*
+         * Fallback recommended
+         */
+
+        if (
+            (
+                !Number.isFinite(
+                    longitude
+                )
+                ||
+                !Number.isFinite(
+                    latitude
+                )
+            )
+            &&
+            config.recommendedLong
+            &&
+            config.recommendedLat
+        ) {
+
+            longitude =
+                parseFloat(
+                    row[
+                        config.recommendedLong
+                    ]
+                );
+
+
+            latitude =
+                parseFloat(
+                    row[
+                        config.recommendedLat
+                    ]
+                );
+
+        }
+
+
+        if (
+            !Number.isFinite(
+                latitude
+            )
+            ||
+            !Number.isFinite(
+                longitude
+            )
+        ) {
+
+            return;
+
+        }
+
+
+        bounds.push([
+            latitude,
+            longitude
+        ]);
+
+
+        /*
+         * Nama pelaku usaha
+         */
+
+        const usaha =
+            config.usahaCol
+            ?
+            String(
+                row[
+                    config.usahaCol
+                ] || ""
+            )
+            :
+            "Pelaku Usaha";
+
+
+        const lokasi =
+            config.lokasiCol
+            ?
+            String(
+                row[
+                    config.lokasiCol
+                ] || ""
+            )
+            :
+            "";
+
+
+        /*
+         * Marker
+         */
+
+        const marker =
+            L.circleMarker(
+                [
+                    latitude,
+                    longitude
+                ],
+                {
+
+                    radius: 8,
+
+                    fillColor:
+                        "#0f766e",
+
+                    color:
+                        "#ffffff",
+
+                    weight: 2,
+
+                    opacity: 1,
+
+                    fillOpacity:
+                        0.9
+
+                }
+            );
+
+
+        /*
+         * Google Maps
+         */
+
+        const googleMapsURL =
+            `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+
+        /*
+         * Popup
+         */
+
+        let popupHTML = `
+
+            <div style="min-width:300px;">
+
+                <div class="popup-title">
+
+                    ${escapeHTML(
+                        usaha
+                    )}
+
+                </div>
+
+                <table class="popup-table">
+
+        `;
+
+
+        if (
+            lokasi
+        ) {
+
+            popupHTML += `
+
+                <tr>
+
+                    <td>Lokasi</td>
+
+                    <td>
+                        ${escapeHTML(
+                            lokasi
+                        )}
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+
+
+        if (
+            config.pelanggaranCol
+        ) {
+
+            popupHTML += `
+
+                <tr>
+
+                    <td>
+                        Indikasi Pelanggaran
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            row[
+                                config.pelanggaranCol
+                            ] || "-"
+                        )}
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+
+
+        if (
+            config.uptCol
+        ) {
+
+            popupHTML += `
+
+                <tr>
+
+                    <td>
+                        UPT PSDKP
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            row[
+                                config.uptCol
+                            ] || "-"
+                        )}
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+
+
+        if (
+            config.tlCol
+        ) {
+
+            popupHTML += `
+
+                <tr>
+
+                    <td>
+                        TL Pengawasan
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            row[
+                                config.tlCol
+                            ] || "-"
+                        )}
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+
+
+        if (
+            config.kegiatanCol
+        ) {
+
+            popupHTML += `
+
+                <tr>
+
+                    <td>
+                        Bentuk Kegiatan
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            row[
+                                config.kegiatanCol
+                            ] || "-"
+                        )}
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+
+
+        popupHTML += `
+
+                <tr>
+
+                    <td>
+                        Longitude
+                    </td>
+
+                    <td>
+                        ${longitude.toFixed(6)}
+                    </td>
+
+                </tr>
+
+
+                <tr>
+
+                    <td>
+                        Latitude
+                    </td>
+
+                    <td>
+                        ${latitude.toFixed(6)}
+                    </td>
+
+                </tr>
+
+                </table>
+
+
+                <a
+                    class="maps-button"
+                    href="${googleMapsURL}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+
+                    📍 Buka di Google Maps
+
+                </a>
+
+
+            </div>
+
+        `;
+
+
+        marker.bindPopup(
+            popupHTML
+        );
+
+
+        markerLayer.addLayer(
+            marker
+        );
+
+
+    });
+
+
+    map.addLayer(
+        markerLayer
+    );
+
+
+    /*
+     * Zoom otomatis
+     */
+
+    if (
+        bounds.length > 0
+    ) {
+
+        map.fitBounds(
+            bounds,
+            {
+                padding: [
+                    40,
+                    40
+                ]
+            }
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   SEARCH + FILTER
+============================================================ */
+
+function applyFilter() {
+
+    const search =
+        document
+            .getElementById(
+                "search"
+            )
+            .value
+            .toLowerCase()
+            .trim();
+
+
+    const upt =
+        document
+            .getElementById(
+                "uptFilter"
+            )
+            .value
+            .toLowerCase()
+            .trim();
+
+
+    const config =
+        window.columnConfig;
+
+
+    const filtered =
+        window.validData.filter(
+            row => {
+
+
+                const usaha =
+                    config.usahaCol
+                    ?
+                    String(
+                        row[
+                            config.usahaCol
+                        ] || ""
+                    )
+                    .toLowerCase()
+                    :
+                    "";
+
+
+                const lokasi =
+                    config.lokasiCol
+                    ?
+                    String(
+                        row[
+                            config.lokasiCol
+                        ] || ""
+                    )
+                    .toLowerCase()
+                    :
+                    "";
+
+
+                const rowUpt =
+                    config.uptCol
+                    ?
+                    String(
+                        row[
+                            config.uptCol
+                        ] || ""
+                    )
+                    .toLowerCase()
+                    :
+                    "";
+
+
+                const matchSearch =
+
+                    !search
+
+                    ||
+
+                    usaha.includes(
+                        search
+                    )
+
+                    ||
+
+                    lokasi.includes(
+                        search
+                    );
+
+
+                const matchUPT =
+
+                    !upt
+
+                    ||
+
+                    rowUpt === upt;
+
+
+                return (
+                    matchSearch
+                    &&
+                    matchUPT
+                );
+
+            }
+        );
+
+
+    renderMarkers(
+        filtered
+    );
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        `${filtered.length} lokasi ditampilkan`;
+
+}
+
+
+/* Search */
+
+document
+    .getElementById(
+        "search"
+    )
+    .addEventListener(
+        "input",
+        applyFilter
+    );
+
+
+/* Filter UPT */
+
+document
+    .getElementById(
+        "uptFilter"
+    )
+    .addEventListener(
+        "change",
+        applyFilter
+    );
+
+
+/* ============================================================
+   ESCAPE HTML
+============================================================ */
+
+function escapeHTML(value) {
+
+    return String(value)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* ============================================================
+   START
+============================================================ */
+
+loadExcel();
+
+</script>
+
+</body>
+</html>
